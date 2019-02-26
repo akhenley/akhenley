@@ -1,0 +1,103 @@
+Sub VolumeCounter():
+    Dim ticket As String
+    Dim lastTicker As String
+
+    Dim volHold As Double
+    Dim volume As Double
+    Dim opened As Double
+    Dim closed As Double
+    
+    Dim ws As Worksheet
+    
+    Dim green As FormatCondition
+    Dim red As FormatCondition
+           
+    ' Do the following for all worksheets
+    For Each ws In ActiveWorkbook.Worksheets
+        ws.Select
+        
+        ' clear variables between worksheets
+        ticket = ""
+        lastTicket = ""
+        volHold = 0
+        volume = 0
+        opened = 0
+        closed = 0
+        
+        ' Setting up the table formatting
+        Set green = Range("J:J").FormatConditions.Add(xlCellValue, xlGreater, "0")
+        Set red = Range("J:J").FormatConditions.Add(xlCellValue, xlLess, "0")
+        With Range("J:J")
+            .NumberFormat = "0.00"
+            .ColumnWidth = 12
+        End With
+        With Range("K:K")
+            .NumberFormat = "0.0%"
+            .ColumnWidth = 12.8
+        End With
+        Range("L:L").ColumnWidth = 15.7
+        green.Interior.Color = vbGreen
+        red.Interior.Color = vbRed
+        
+        Cells(1, 9).Value = "Ticker"
+        Cells(1, 10).Value = "Yearly Change"
+        Cells(1, 11).Value = "Percent Change"
+        Cells(1, 12).Value = "Total Stock Volume"
+        
+        ' initiate counter for new total volume table
+        j = 2
+        
+        ' start looping through the table, addition to new total volume table is based on comparison
+        ' between tickers. The + 1 ensures the last ticker is counted by comparing blank cell against it
+        For i = 2 To (WorksheetFunction.CountA(Range("A:A")) + 1)
+            ' below loop adds first ticket, which can't be compared to any others
+            If i = 2 Then
+                volume = Cells(i, 7).Value
+                opened = Cells(i, 3).Value
+            ' Once past the first cell, ...
+            Else
+                volHold = Cells(i, 7).Value
+                ticker = Cells(i, 1).Value
+                lastTicker = Cells(i - 1, 1).Value
+                ' ... compares tickers to determine weither to add volume to the total ...
+                If ticker = lastTicker Then
+                    volume = volHold + volume
+                ' ... or start a new counter.
+                Else
+                        closed = Cells(i - 1, 6).Value
+                        
+                        ' make sure that stocks closing at 0 (not trading) don't mess up percentChange -> (0-x)/x = -%100
+                        If closed <> 0 Then
+                            yearlyChange = closed - opened
+                            percentChange = (closed - opened) / (opened)
+                            Else
+                            percentChange = 0
+                        End If
+                        
+                        ' Only store first opening value that actually has value so that percentChange is valid.
+                        k = 0
+                        If Cells(i + k, 3).Value = 0 Then
+                            k = k + 1
+                            Else
+                            opened = Cells(i + k, 3).Value
+                            k = 0
+                        End If
+                        
+                        ' transfer info to new side-table, note use of j
+                        Cells(j, 9).Value = lastTicker
+                        Cells(j, 10).Value = yearlyChange
+                        Cells(j, 11).Value = percentChange
+                        Cells(j, 12).Value = volume
+                       
+                       ' start new count
+                        volume = volHold
+                        
+                        ' this counter was added to make the new table,
+                        ' I couldn't figure out how to do a For loop for this purpose.
+                        ' Conveniently, because its not a For loop, it has no upper limit.
+                        j = j + 1
+                        End If
+            End If
+        Next i
+    Next ws
+End Sub
